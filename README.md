@@ -11,5 +11,19 @@ Tasks in Assignment 1 :-. <br>
 
 #Assignment2<br>
 This is a Shell made in C in Operating Systems Assignment2,<br>
-I have named this shell WonderShell (*cough* Not related to wonder women) pls dont fork it Untill I do my assignemnt complete or I will be penalized<br>
+I have named this shell WonderShell (*coughs* Not related to wonder women) pls dont fork it Untill I do my assignemnt complete or I will be penalized<br>
 
+
+Describtion of Task2<br>
+1. Implement a shell which supports semi-colon separated list of commands.<br>
+2. shell support of the ‘&’ operator which lets a program to run in the background after printing the process id
+of the newly created process.<br>
+3. The directory from which the shell is invoked will be the home directory of the shell
+and should be indicated by “~". If the user executes "cd" i.e change dir, then the
+corresponding change must be reflected in the shell as well.<br>
+4. Builtin commands are contained within the shell itself.implement cd, pwd, clear, ls and echo.<br>
+5. Shell execute system commands either in the background or in the foreground.<br>
+6. pinfo : prints the process related info of shell program.<br>
+7. If the background process exits then the shell displays the appropriate message to the user.<br>
+8. reminder command ‘remindme’ which reminds you with a custom message after the given number of seconds elapse.
+9. A ‘clock’ command which displays dynamic date and time in your shell.
