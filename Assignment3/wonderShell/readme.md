@@ -1,4 +1,4 @@
-# Assignment2
+# Assignment3
 This is a Shell made in C in Operating Systems Assignment2,
 I have named this shell WonderShell (coughs Not related to wonder women) pls dont fork it Untill I do my assignemnt complete or I will be penalized
 
