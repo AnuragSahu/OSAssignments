@@ -22,7 +22,17 @@
 #define WHT   "\x1B[37m"
 #define RESET "\x1B[0m"
 
+#define EVE_TOK_BUFSIZE 64
+#define EVE_TOK_DELIM " \t\n\r"
+#define EVE_TOK_CDELIM ";\n"
+
 #define clear() printf("\033[H\033[J")
+
+struct command
+{
+	char **argv;
+	int len;
+};
 
 char deviceName[100],currentWD[PATH_MAX];
 char* userName;
@@ -36,11 +46,26 @@ double waitFor;
 char msg[500];
 int timeVLD = 0;
 int loopflg=1;
+int foreground=0;
 
+void HandlingPiping(char str[PATH_MAX]);
+
+void executeInbuild(char* list[50],int len);
+
+
+void ctrlC()
+{
+	int now = getpid();
+	//printf("%d\n",now);
+	if(foreground==1)
+		kill(now,0);
+  printf("\n");
+}
 
 void eleminate(int sig){
   loopflg = 0;
 }
+
 void clkCmd(char* list[50],int len)
 {
 	time_t timer;
@@ -84,7 +109,6 @@ void clkCmd(char* list[50],int len)
     }
 
 }
-
 
 char *replaceWord(const char *s, const char *oldW,const char *newW)
 {
@@ -214,6 +238,7 @@ extern void checkChild()
 	if(a>0)
 	{
 		fprintf(stderr,"pid %d exicted Normally\n",a);
+		foreground=0;
 	}
 }
 
@@ -233,6 +258,7 @@ int foreGroundProcess(char* line[50], int len)
 		{
 			perror("lsh");
 		}
+		foreground =1;
 		exit(EXIT_FAILURE);
 	} 
 	else if (pid < 0) 
@@ -573,7 +599,6 @@ void executeInbuild(char* list[50],int len)
 
 void outputFileAt(char* list[50],int len, int n, int appendOrNot)
 {
-	
 	int targetFile;
 	if(appendOrNot==1)
 		targetFile = open(list[n+1],O_WRONLY | O_RDONLY |O_APPEND | O_CREAT , 0644 );
@@ -655,24 +680,190 @@ void chkFile(char* list [50],int len)
 		executeInbuild(list,len);
 	}
 }
+
+int
+spawn_proc (int in, int out, struct command *cmd)
+{
+  pid_t pid;
+
+  if ((pid = fork ()) == 0)
+    {
+      if (in != 0)
+        {
+          dup2 (in, 0);
+          close (in);
+        }
+
+      if (out != 1)
+        {
+          dup2 (out, 1);
+          close (out);
+        }
+
+      if (execvp (cmd->argv [0], (char * const *)cmd->argv) == -1)
+      	{
+
+      		fprintf(stderr, "Heeeeeello\n");
+      		exit(EXIT_FAILURE);
+      	}
+      	return 1;
+    }
+
+  return pid;
+}
+
+void fork_pipes (int b, struct command *cmd)
+{
+	int errLog = open("errLog",O_WRONLY | O_APPEND | O_CREAT,0644);
+	dup2(errLog,2);
+  int i,result;
+  pid_t pid,ppid;
+  int in, fd [2];
+  in = 0;
+
+  for (i = 0; i < b - 1; ++i)
+    {
+   //   printf("%d %d\n",i,b);
+      pipe (fd);
+
+      spawn_proc (in, fd [1], cmd + i);
+
+      close (fd [1]);
+
+      in = fd [0];
+    }
+     //  printf("hi3\n");
+
+  if (in != 0)
+    dup2 (in, 0);
+
+	pid=fork();
+	if(pid==0)
+  	{
+	//	  chkFile(cmd[i].argv[0],sizeof(cmd[i].argv)/sizeof(cmd[i].argv[0]))
+  		if(execvp (cmd[i].argv[0], (char * const *)cmd[i].argv)== -1)
+  		{
+  			fprintf(stderr, "Error Handled, aboarding cannot execute.\n");
+    		exit(EXIT_FAILURE);
+  		}
+  }
+  	else
+  	{
+  		ppid = waitpid(pid,&result,0);
+  		while(!WIFEXITED(result) && !WIFSIGNALED(result))
+  			ppid = waitpid(pid,&result,0);
+  	}
+ // printf("%d\n", a);
+  //printf("nnn\n");
+  dup2(2,errLog);
+  close(errLog);
+}
+
+#define EVE_TOK_CDELIM ";\n"
+#define EVE_TOK_CDELIM2 "|\n"
+
+char **pipe_split_line(char *line)
+//cmd pipe_split_line(char*line)
+{
+	int bufsize=EVE_TOK_BUFSIZE, position=0;
+	char **tokens=malloc(bufsize*sizeof(char *));
+	char *token;
+	char * dfgh;
+//	strcpy(dfgh,line);
+
+	//can't allocate buffer
+	if(!tokens)
+	{
+		fprintf(stderr, "Allocation\n");
+		exit(1);
+	}
+	token=strtok(line, EVE_TOK_DELIM);
+	while(token!=NULL)
+	{
+		tokens[position]=token;
+		position++;
+		if(position>=bufsize)
+		{
+			bufsize += EVE_TOK_BUFSIZE;
+			tokens=realloc(tokens, bufsize*sizeof(char*));
+			if(!tokens)
+			{
+				fprintf(stderr, "Allocation error\n");
+				exit(1);
+			}
+		}
+		token=strtok(NULL, EVE_TOK_DELIM);
+	}
+	tokens[position]=NULL;
+	//count=position-1;
+	//	printf("\n");
+	return tokens;
+}
+
+int pipe_split_command(char* line)
+{
+	int counter=0;
+	int bufsize = EVE_TOK_BUFSIZE, position = 0;
+	char *token;
+	char *token2;
+	char *saveptr;
+	char *saveptr2;
+	char *list[100];
+	struct command cmd[100];
+	token = strtok_r(line, EVE_TOK_CDELIM,&saveptr);
+	//printf("token1:%s\n",token);
+
+	while (token != NULL)
+	{
+		token2 = strtok_r(token, EVE_TOK_CDELIM2,&saveptr2);
+	//	printf("%s\n",token2);
+		while(token2!=NULL)
+		{
+			list[counter] = token2;	
+			counter++;
+			token2 = strtok_r(NULL, EVE_TOK_CDELIM2,&saveptr2);
+		}
+		if(counter>1)
+			{
+				int gg = 0;
+				while(gg<counter)
+				{
+					(cmd[gg]).argv = pipe_split_line(list[gg]);
+				//	cmd[gg]=pipe_split_line(list[gg]);
+					gg++;
+				}
+
+				fork_pipes(counter,cmd);
+			}
+		token = strtok_r(NULL, EVE_TOK_CDELIM,&saveptr);
+		counter=0;
+		
+	}
+	return 1;
+}
+void HandlingPiping(char str[PATH_MAX])
+{
+	pipe_split_command(str);
+}
 void splitcommands(char str[PATH_MAX])
 {
-	char *dimlem = " \n";
-	char *dimlem1 = ";";
-	char *dimlem2 = "|";
-	char* anotherPointer;
-	char* anotherPointer1;
-	char* anotherPointer2;
-	int looper1=0;
-	char* token;
-	char* token1;
-	char* token2;
-	token1 = strtok_r(str,dimlem1,&anotherPointer1);
-	while(token1!=NULL)
+	char dilim = '|';
+	if(strchr(str,dilim)!=NULL)
 	{
-		int piped=0;
-		token2 = strtok_r(token1,dimlim2,&anotherPointer2);
-		while(token2!=NULL)
+		//printf("Has Piping\n");
+		HandlingPiping(str);
+	}
+	else
+	{
+		char *dimlem = " \n";
+		char *dimlem1 = ";";
+		char* anotherPointer;
+		char* anotherPointer1;
+		int looper1=0;
+		char* token;
+		char* token1;
+		token1 = strtok_r(str,dimlem1,&anotherPointer1);
+		while(token1!=NULL)
 		{
 			char* argumentList[50];
 			int looper=0;
@@ -684,12 +875,9 @@ void splitcommands(char str[PATH_MAX])
 			}		
 			token1 = strtok_r(NULL,dimlem1,&anotherPointer1);
 			//executeInbuild(argumentList,looper);
-
 			chkFile(argumentList,looper);
-			piped++;
-			token2 = strtok_r(NULL,dime=lem2,&anotherPointer2);
-		}
 
+		}
 	}
 }
 
@@ -724,7 +912,6 @@ char *getUserName()
 
 int main()
 {
-//	char currentWD[200];
 	char shellsWD[200];
 	getcwd(currentWD,sizeof(currentWD));
 	gethostname(deviceName,sizeof(deviceName));
@@ -732,23 +919,31 @@ int main()
 	char* args;
 	while(1)
 	{
+		int a = dup(0);
+		int b = dup(1);
 		getcwd(shellsWD,sizeof(shellsWD));
 		char *cwd1 = shellsWD;
 		if(strncmp(currentWD,shellsWD,strlen(currentWD))==0)
 				cwd1 = replaceWord(shellsWD,currentWD,"");
 
-	printf("<"YEL"%s@%s"RESET":"BLU"~%s"RESET">\n",userName,deviceName,cwd1);
-//		printf("<%s@%s:~%s>",userName,deviceName,currentWD);
-	args = read_command();
-	chkAlarm();
-	if(strcmp("exit\n",args)==0)
-	{
-		printf("Exiting the Ultimate shell ever made the WonderShell\n");
+		printf("<"YEL"%s@%s"RESET":"BLU"~%s"RESET">\n",userName,deviceName,cwd1);
+		//		printf("<%s@%s:~%s>",userName,deviceName,currentWD);
+		args = read_command();
+		chkAlarm();
+		if(strcmp("exit\n",args)==0)
+		{
+			printf("Exiting the Ultimate shell ever made the WonderShell\n");
+			free(args);
+			return 1;
+		}
+		splitcommands(args);
 		free(args);
-		return 1;
-	}
-	splitcommands(args);
-	free(args);
+		signal(SIGINT,ctrlC);
+		dup2(a,0);
+		dup2(b,1);
+		close(a);
+		close(b);
+		
 	}
 
 }
