@@ -17,3 +17,13 @@ wc: '>'cat: '<': No such file or directory
 : No such file or directory
 pid 29845 exicted Normally
 pid 30515 exicted Normally
+pid 31370 exicted Normally
+pid 31415 exicted Normally
+cat: '<': No such file or directory
+pid 31480 exicted Normally
+cat: '<': No such file or directory
+pid 31521 exicted Normally
+cat: '<': No such file or directory
+cat: '<': No such file or directory
+pid 31565 exicted Normally
+pid 31546 exicted Normally

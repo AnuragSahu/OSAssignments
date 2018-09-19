@@ -740,13 +740,13 @@ void fork_pipes (int b, struct command *cmd)
 	pid=fork();
 	if(pid==0)
   	{
-	//	  chkFile(cmd[i].argv[0],sizeof(cmd[i].argv)/sizeof(cmd[i].argv[0]))
-  		if(execvp (cmd[i].argv[0], (char * const *)cmd[i].argv)== -1)
+		  chkFile(cmd[i].argv,cmd[i].len);
+/*  		if(execvp (cmd[i].argv[0], (char * const *)cmd[i].argv)== -1)
   		{
   			fprintf(stderr, "Error Handled, aboarding cannot execute.\n");
     		exit(EXIT_FAILURE);
   		}
-  }
+*/  }
   	else
   	{
   		ppid = waitpid(pid,&result,0);
@@ -762,8 +762,8 @@ void fork_pipes (int b, struct command *cmd)
 #define EVE_TOK_CDELIM ";\n"
 #define EVE_TOK_CDELIM2 "|\n"
 
-char **pipe_split_line(char *line)
-//cmd pipe_split_line(char*line)
+//char **pipe_split_line(char *line)
+struct command pipe_split_line(char*line)
 {
 	int bufsize=EVE_TOK_BUFSIZE, position=0;
 	char **tokens=malloc(bufsize*sizeof(char *));
@@ -797,7 +797,11 @@ char **pipe_split_line(char *line)
 	tokens[position]=NULL;
 	//count=position-1;
 	//	printf("\n");
-	return tokens;
+	struct command cmd ;
+	cmd.argv = tokens;
+	cmd.len = position;
+	//return tokens;
+	return cmd;
 }
 
 int pipe_split_command(char* line)
@@ -828,8 +832,8 @@ int pipe_split_command(char* line)
 				int gg = 0;
 				while(gg<counter)
 				{
-					(cmd[gg]).argv = pipe_split_line(list[gg]);
-				//	cmd[gg]=pipe_split_line(list[gg]);
+				//	(cmd[gg]).argv = pipe_split_line(list[gg]);
+					cmd[gg]=pipe_split_line(list[gg]);
 					gg++;
 				}
 
