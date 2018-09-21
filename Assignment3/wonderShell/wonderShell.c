@@ -22,9 +22,10 @@
 #define WHT   "\x1B[37m"
 #define RESET "\x1B[0m"
 
-#define EVE_TOK_BUFSIZE 64
-#define EVE_TOK_DELIM " \t\n\r"
-#define EVE_TOK_CDELIM ";\n"
+#define BUFFERSIZE_TOKEN 64
+#define DILIMITOR_WORD " \t\n\r"
+#define DILIMITOR_COMMAND ";\n"
+#define DILIMITOR_PIPE "|\n"
 
 #define clear() printf("\033[H\033[J")
 
@@ -33,6 +34,14 @@ struct command
 	char **argv;
 	int len;
 };
+
+typedef struct running_jobs
+{
+  char jobName[100];
+  pid_t pid;
+  struct running_jobs * next;
+}running_jobs;
+running_jobs* rjobs=NULL;
 
 char deviceName[100],currentWD[PATH_MAX];
 char* userName;
@@ -47,11 +56,113 @@ char msg[500];
 int timeVLD = 0;
 int loopflg=1;
 int foreground=0;
+int chldrun=0;
 
 void HandlingPiping(char str[PATH_MAX]);
 
 void executeInbuild(char* list[50],int len);
 
+int add_job(pid_t pid, char * name)
+{
+	running_jobs *new=(running_jobs*)malloc(sizeof(running_jobs));
+	new->pid=pid;
+	strcpy(new->jobName,name);
+	new->next=NULL;
+	if (rjobs==NULL)
+	{
+		rjobs=new;
+	}
+	else
+	{
+		running_jobs *temp=rjobs;
+
+		for (;temp->next!=NULL;temp=temp->next);
+		temp->next=new;
+	}
+}
+
+int delete_job(pid_t pid)
+{
+	foreground=0;
+	if (rjobs==NULL) {
+		return 1;
+	}
+	if (rjobs->pid==pid) {
+		running_jobs *del=rjobs;
+		rjobs=rjobs->next;
+		free(del);
+		return 0;
+	}
+	running_jobs *temp=rjobs,*prev;
+	for (prev=rjobs;temp->pid!=pid || temp==NULL;temp=temp->next)
+	{
+		if (temp!=rjobs) {
+		prev=prev->next;
+	}
+	}
+	//running_jobs *del=temp->next;
+	if(temp!=NULL)
+	{
+		prev->next=temp->next;
+		free(temp);
+	}
+}
+
+int search_job(pid_t pid)
+{
+
+}
+
+void fgPressed(char **list)
+{
+	if(list[1]==NULL)
+		printf("Syntax Error!\n");
+	else
+	{
+		char* ptr;
+		pid_t pid=strtol(list[1],&ptr,10);
+		//pid_t pid=make_int(list[1]),
+		pid_t wpid;
+		int status;
+		do{
+			wpid=waitpid(pid, &status,WUNTRACED);
+		}while(!WIFEXITED(status) && !WIFSIGNALED(status));
+	}
+}
+
+void kjobPressed(char **list)
+{
+	if(list[1]==NULL || list[2]==NULL)
+	{
+		printf("Invalid Syntax usage -> kjob <jobNumber> <signalNumber>");
+		return;
+	}
+	char* ptr1, *ptr2;
+	pid_t pid=strtol(list[1],&ptr1,10);
+	int signal=strtol(list[2],&ptr2,10);
+	kill(pid,signal);
+}
+
+void jobsPressed()
+{
+	//printf("helo\n");
+	running_jobs *curr=rjobs;
+	int i;
+	for (i=1;curr!=NULL;curr=curr->next,i++) {
+		printf("[%d] %s [%d]\n",i,curr->jobName,curr->pid);
+	}
+	//return 1;
+}
+
+void overKillPressed()
+{
+	running_jobs *curr=rjobs;
+	for(;curr!=NULL;curr=curr->next)
+	{
+		pid_t pid=curr->pid;
+		kill(pid,SIGQUIT);
+	}
+}
 
 void ctrlC()
 {
@@ -116,27 +227,18 @@ char *replaceWord(const char *s, const char *oldW,const char *newW)
     int i, cnt = 0;
     int newWlen = strlen(newW);
     int oldWlen = strlen(oldW);
- 
-    // Counting the number of times old word
-    // occur in the string
     for (i = 0; s[i] != '\0'; i++)
     {
         if (strstr(&s[i], oldW) == &s[i])
         {
             cnt++;
- 
-            // Jumping to index after the old word.
             i += oldWlen - 1;
         }
     }
- 
-    // Making new string of enough length
     result = (char *)malloc(i + cnt * (newWlen - oldWlen) + 1);
- 
     i = 0;
     while (*s)
     {
-        // compare the substring with the result
         if (strstr(s, oldW) == s)
         {
             strcpy(&result[i], newW);
@@ -146,7 +248,6 @@ char *replaceWord(const char *s, const char *oldW,const char *newW)
         else
             result[i++] = *s++;
     }
- 
     result[i] = '\0';
     return result;
 }
@@ -154,24 +255,20 @@ char *replaceWord(const char *s, const char *oldW,const char *newW)
 void replaceAll(char * str, char oldChar, char newChar)
 {
   int i = 0;
-
-  /* Run till end of string */
   while(str[i] != '\0')
   {
-      /* If occurrence of character is found */
       if(str[i] == oldChar)
       {
           str[i] = newChar;
       }
-
       i++;
   }
 }
+
 void chkAlarm()
 {
 	if(timeVLD==0)
 	{
-	//	printf("No reminder\n");	
 		return;
 	}
 	else if(timeVLD==1)
@@ -194,7 +291,6 @@ void chkAlarm()
 		}
 	}
 	return;
-
 }
 
 void setAlarm(char* list[50],int len)
@@ -224,20 +320,18 @@ void setAlarm(char* list[50],int len)
 	return;
 }
 
-extern void checkChild()
+void checkChild()
 {
 	// This function checks if the child process is still alive or not
 	int st;
 	int *status;
 	pid_t a;
 	status = &st;
-	//FILE* statusf;
-	//char path[70];
-	//char processName[100];
 	a= waitpid(-1, status, WNOHANG);
 	if(a>0)
 	{
 		fprintf(stderr,"pid %d exicted Normally\n",a);
+		delete_job(a);
 		foreground=0;
 	}
 }
@@ -247,7 +341,6 @@ int foreGroundProcess(char* line[50], int len)
 	//Execution of foreground process
 	line[len]=NULL;
 	pid_t pid;
-	//pid_t wpid;
   	int status;
 
 	pid = fork();
@@ -284,11 +377,6 @@ int backGroundProcess(char* line[50], int len)
 {
 	line[len]=NULL;
 	pid_t pid;
-	//pid_t wpid;
-  	//int status;
-  	//static int cpid;
-
-	//  	printf("Creating Child %d\n",getpid());
 	pid = fork();
 	childpid=getpid();
 	if (pid == 0)
@@ -296,7 +384,6 @@ int backGroundProcess(char* line[50], int len)
 		// Child process
 		childpid=getpid();
 		printf("pid-- %d\n",childpid);
-	//		printf("creating child\n");
 		if (execvp(line[0], line) == -1) 
 		{
 			perror("lsh");
@@ -306,16 +393,19 @@ int backGroundProcess(char* line[50], int len)
 	else if (pid < 0) 
 	{
 		// Error forking
-		perror("lsh");
+		perror("Error Handled: lsh");
 	}
 	else
 	{
-		//
+		//add_job(pid,line[0]);
+		// DO NO THING HERE!!
 	}
+	add_job(pid,line[0]);
 	return 1;
 }
 
 int switchForeOrBackGround(char* line[50], int len)
+//int switchForeOrBackGround(char** args)
 {
 	if(strcmp(line[len-1],"&")==0)
 	{
@@ -331,9 +421,8 @@ int switchForeOrBackGround(char* line[50], int len)
 		childProcName = line[0];
 		return foreGroundProcess(line,len);
 	}
+	
 }
-
-
 
 int chkFlgOrPath(char* list[50],int len)
 {
@@ -380,6 +469,18 @@ void executeInbuild(char* list[50],int len)
 	}
 	if(strcmp("clear",list[0])==0)
 		clear();
+
+	else if(strcmp("fg",list[0])==0)
+		fgPressed(list);
+
+	else if(strcmp("kjob",list[0])==0)
+		kjobPressed(list);
+
+	else if(strcmp("jobs",list[0])==0)
+		jobsPressed();
+
+	else if(strcmp("overkill",list[0])==0)
+		overKillPressed();
 
 	else if(strcmp("cd",list[0])==0)
 	{
@@ -595,6 +696,7 @@ void executeInbuild(char* list[50],int len)
    		printf("%s\n\n",exePath1);
 	}
 	else switchForeOrBackGround(list,len);
+	//switchForeOrBackGround(list);
 }
 
 void outputFileAt(char* list[50],int len, int n, int appendOrNot)
@@ -645,6 +747,12 @@ void chkFile(char* list [50],int len)
 	int redirected = 0;
 	while(n<len)
 	{
+		if(strcmp(list[n],"<")==0)
+		{
+			redirected=1;
+			printf("InputFile redirection %s.\n",list[n+1]);
+			inputFileFrom(list,len,n);
+		}
 		if(strcmp(list[n],">")==0)
 		{
 			redirected = 1;
@@ -667,12 +775,7 @@ void chkFile(char* list [50],int len)
 			printf("Appended to file %s!!\n",list[n+1]);
 			outputFileAt(list,len,n,1);
 		}
-		if(strcmp(list[n],"<")==0)
-		{
-			redirected=1;
-			printf("InputFile redirection %s.\n",list[n+1]);
-			inputFileFrom(list,len,n);
-		}
+		
 		n++;
 	}
 	if(redirected==0)
@@ -681,29 +784,27 @@ void chkFile(char* list [50],int len)
 	}
 }
 
-int
-spawn_proc (int in, int out, struct command *cmd)
+int executeCommand (int in, int out, struct command *cmd)
 {
-  pid_t pid;
-
-  if ((pid = fork ()) == 0)
+	pid_t pid =fork();
+	if(pid==0)
     {
-      if (in != 0)
+    	if(in != 0)
         {
           dup2 (in, 0);
           close (in);
         }
 
-      if (out != 1)
+      	if (out != 1)
         {
           dup2 (out, 1);
           close (out);
         }
 
-      if (execvp (cmd->argv [0], (char * const *)cmd->argv) == -1)
+		//chkFile(cmd->argv,cmd->len);
+      	if (execvp (cmd->argv [0], (char * const *)cmd->argv) == -1)
       	{
-
-      		fprintf(stderr, "Heeeeeello\n");
+      		fprintf(stderr, "Error executing the intermidiate command\n");
       		exit(EXIT_FAILURE);
       	}
       	return 1;
@@ -714,77 +815,57 @@ spawn_proc (int in, int out, struct command *cmd)
 
 void fork_pipes (int b, struct command *cmd)
 {
-	int errLog = open("errLog",O_WRONLY | O_APPEND | O_CREAT,0644);
-	dup2(errLog,2);
-  int i,result;
-  pid_t pid,ppid;
-  int in, fd [2];
-  in = 0;
+	//int errLog = open("errLog",O_WRONLY | O_APPEND | O_CREAT,0644);
+	//dup2(errLog,2);
+  	int i,result;
+  	pid_t pid,ppid;
+  	int in, fd [2];
+  	in = 0;
 
-  for (i = 0; i < b - 1; ++i)
+  	for (i=0;i<b-1;++i)
     {
-   //   printf("%d %d\n",i,b);
       pipe (fd);
-
-      spawn_proc (in, fd [1], cmd + i);
-
-      close (fd [1]);
-
-      in = fd [0];
+      executeCommand (in,fd[1],cmd+i);
+      close(fd[1]);
+      in=fd[0];
     }
-     //  printf("hi3\n");
-
-  if (in != 0)
-    dup2 (in, 0);
-
+  	if (in != 0)
+    	dup2 (in, 0);
 	pid=fork();
 	if(pid==0)
   	{
 		  chkFile(cmd[i].argv,cmd[i].len);
-/*  		if(execvp (cmd[i].argv[0], (char * const *)cmd[i].argv)== -1)
-  		{
-  			fprintf(stderr, "Error Handled, aboarding cannot execute.\n");
-    		exit(EXIT_FAILURE);
-  		}
-*/  }
+	}
   	else
   	{
   		ppid = waitpid(pid,&result,0);
   		while(!WIFEXITED(result) && !WIFSIGNALED(result))
   			ppid = waitpid(pid,&result,0);
   	}
- // printf("%d\n", a);
-  //printf("nnn\n");
-  dup2(2,errLog);
-  close(errLog);
+  //dup2(2,errLog);
+  //close(errLog);
 }
-
-#define EVE_TOK_CDELIM ";\n"
-#define EVE_TOK_CDELIM2 "|\n"
 
 //char **pipe_split_line(char *line)
 struct command pipe_split_line(char*line)
 {
-	int bufsize=EVE_TOK_BUFSIZE, position=0;
+	int bufsize=BUFFERSIZE_TOKEN, position=0;
 	char **tokens=malloc(bufsize*sizeof(char *));
 	char *token;
 	char * dfgh;
-//	strcpy(dfgh,line);
-
-	//can't allocate buffer
 	if(!tokens)
 	{
-		fprintf(stderr, "Allocation\n");
+		fprintf(stderr, "Buffer Allocation Error aboarding\n");
 		exit(1);
 	}
-	token=strtok(line, EVE_TOK_DELIM);
+	token=strtok(line, DILIMITOR_WORD);
 	while(token!=NULL)
 	{
 		tokens[position]=token;
 		position++;
 		if(position>=bufsize)
 		{
-			bufsize += EVE_TOK_BUFSIZE;
+			bufsize += BUFFERSIZE_TOKEN;
 			tokens=realloc(tokens, bufsize*sizeof(char*));
 			if(!tokens)
 			{
@@ -792,40 +873,37 @@ struct command pipe_split_line(char*line)
 				exit(1);
 			}
 		}
-		token=strtok(NULL, EVE_TOK_DELIM);
+		token=strtok(NULL, DILIMITOR_WORD);
 	}
 	tokens[position]=NULL;
-	//count=position-1;
-	//	printf("\n");
 	struct command cmd ;
 	cmd.argv = tokens;
 	cmd.len = position;
-	//return tokens;
 	return cmd;
 }
 
 int pipe_split_command(char* line)
 {
 	int counter=0;
-	int bufsize = EVE_TOK_BUFSIZE, position = 0;
+	int bufsize = BUFFERSIZE_TOKEN, position = 0;
 	char *token;
 	char *token2;
 	char *saveptr;
 	char *saveptr2;
 	char *list[100];
 	struct command cmd[100];
-	token = strtok_r(line, EVE_TOK_CDELIM,&saveptr);
+	token = strtok_r(line, DILIMITOR_COMMAND,&saveptr);
 	//printf("token1:%s\n",token);
 
 	while (token != NULL)
 	{
-		token2 = strtok_r(token, EVE_TOK_CDELIM2,&saveptr2);
+		token2 = strtok_r(token, DILIMITOR_PIPE,&saveptr2);
 	//	printf("%s\n",token2);
 		while(token2!=NULL)
 		{
 			list[counter] = token2;	
 			counter++;
-			token2 = strtok_r(NULL, EVE_TOK_CDELIM2,&saveptr2);
+			token2 = strtok_r(NULL, DILIMITOR_PIPE,&saveptr2);
 		}
 		if(counter>1)
 			{
@@ -839,7 +917,7 @@ int pipe_split_command(char* line)
 
 				fork_pipes(counter,cmd);
 			}
-		token = strtok_r(NULL, EVE_TOK_CDELIM,&saveptr);
+		token = strtok_r(NULL, DILIMITOR_COMMAND,&saveptr);
 		counter=0;
 		
 	}
@@ -938,7 +1016,7 @@ int main()
 		{
 			printf("Exiting the Ultimate shell ever made the WonderShell\n");
 			free(args);
-			return 1;
+			exit(1);
 		}
 		splitcommands(args);
 		free(args);
