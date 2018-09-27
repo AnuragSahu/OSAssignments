@@ -35,13 +35,14 @@ struct command
 	int len;
 };
 
-typedef struct running_jobs
+typedef struct backGroundJobs
 {
   char jobName[100];
   pid_t pid;
-  struct running_jobs * next;
-}running_jobs;
-running_jobs* rjobs=NULL;
+  char* status;
+  struct backGroundJobs * next;
+}backGroundJobs;
+backGroundJobs* ThisJobs=NULL;
 
 char deviceName[100],currentWD[PATH_MAX];
 char* userName;
@@ -57,24 +58,26 @@ int timeVLD = 0;
 int loopflg=1;
 int foreground=0;
 int chldrun=0;
+int shell_pid;
 
 void HandlingPiping(char str[PATH_MAX]);
 
 void executeInbuild(char* list[50],int len);
 
-int add_job(pid_t pid, char * name)
+int add_job(char *stat,pid_t pid, char * name)
 {
-	running_jobs *new=(running_jobs*)malloc(sizeof(running_jobs));
+	backGroundJobs *new=(backGroundJobs*)malloc(sizeof(backGroundJobs));
 	new->pid=pid;
+	new->status = stat;
 	strcpy(new->jobName,name);
 	new->next=NULL;
-	if (rjobs==NULL)
+	if (ThisJobs==NULL)
 	{
-		rjobs=new;
+		ThisJobs=new;
 	}
 	else
 	{
-		running_jobs *temp=rjobs;
+		backGroundJobs *temp=ThisJobs;
 
 		for (;temp->next!=NULL;temp=temp->next);
 		temp->next=new;
@@ -84,23 +87,23 @@ int add_job(pid_t pid, char * name)
 int delete_job(pid_t pid)
 {
 	foreground=0;
-	if (rjobs==NULL) {
+	if (ThisJobs==NULL) {
 		return 1;
 	}
-	if (rjobs->pid==pid) {
-		running_jobs *del=rjobs;
-		rjobs=rjobs->next;
+	if (ThisJobs->pid==pid) {
+		backGroundJobs *del=ThisJobs;
+		ThisJobs=ThisJobs->next;
 		free(del);
 		return 0;
 	}
-	running_jobs *temp=rjobs,*prev;
-	for (prev=rjobs;temp->pid!=pid || temp==NULL;temp=temp->next)
+	backGroundJobs *temp=ThisJobs,*prev;
+	for (prev=ThisJobs;temp->pid!=pid || temp==NULL;temp=temp->next)
 	{
-		if (temp!=rjobs) {
+		if (temp!=ThisJobs) {
 		prev=prev->next;
 	}
 	}
-	//running_jobs *del=temp->next;
+	//backGroundJobs *del=temp->next;
 	if(temp!=NULL)
 	{
 		prev->next=temp->next;
@@ -110,7 +113,24 @@ int delete_job(pid_t pid)
 
 int search_job(pid_t pid)
 {
-
+	printf("Searching for %d\n",pid);
+	if (ThisJobs==NULL) {
+		return 0;
+	}
+	if (ThisJobs->pid==pid) {
+		printf(" found");
+		return 1;
+	}
+	backGroundJobs *temp=ThisJobs;
+	for (;temp->next!=NULL;temp=temp->next);
+	{
+		if(temp->pid==pid)
+		{
+			printf(" found");
+			return 1;
+		}
+	}
+	return 0;
 }
 
 void fgPressed(char **list)
@@ -146,17 +166,17 @@ void kjobPressed(char **list)
 void jobsPressed()
 {
 	//printf("helo\n");
-	running_jobs *curr=rjobs;
+	backGroundJobs *curr=ThisJobs;
 	int i;
 	for (i=1;curr!=NULL;curr=curr->next,i++) {
-		printf("[%d] %s [%d]\n",i,curr->jobName,curr->pid);
+		printf("[%d] %s %s [%d]\n",i,curr->status,curr->jobName,curr->pid);
 	}
 	//return 1;
 }
 
 void overKillPressed()
 {
-	running_jobs *curr=rjobs;
+	backGroundJobs *curr=ThisJobs;
 	for(;curr!=NULL;curr=curr->next)
 	{
 		pid_t pid=curr->pid;
@@ -166,11 +186,30 @@ void overKillPressed()
 
 void ctrlC()
 {
+	signal(SIGINT,ctrlC);
 	int now = getpid();
-	//printf("%d\n",now);
-	if(foreground==1)
-		kill(now,0);
-  printf("\n");
+	if(shell_pid!=now)
+		printf("%d\n",now);
+	kill(now,SIGKILL);
+/*	if(search_job(now)==0 && shell_pid!=now)
+	{
+		printf("Closing the process with pid: %d\n",now);
+		kill(now,SIGKILL);
+		printf("\n");
+	}*/
+}
+
+void ctrlZ()
+{
+	signal(SIGTSTP, ctrlZ);
+	int now = getpid();
+	printf("%d\n",now);
+/*	if(search_job(now)==0 && shell_pid!=now)
+	{
+		printf("Closing the process with pid: %d\n",now);
+		kill(now,SIGKILL);
+		printf("\n");
+	}*/
 }
 
 void eleminate(int sig){
@@ -400,7 +439,7 @@ int backGroundProcess(char* line[50], int len)
 		//add_job(pid,line[0]);
 		// DO NO THING HERE!!
 	}
-	add_job(pid,line[0]);
+	add_job("Running",pid,line[0]);
 	return 1;
 }
 
@@ -701,23 +740,23 @@ void executeInbuild(char* list[50],int len)
 
 void outputFileAt(char* list[50],int len, int n, int appendOrNot)
 {
-	int targetFile;
+	int targetFilefd;
 	if(appendOrNot==1)
-		targetFile = open(list[n+1],O_WRONLY | O_RDONLY |O_APPEND | O_CREAT , 0644 );
-	else targetFile = open(list[n+1],O_WRONLY | O_RDONLY | O_CREAT , 0644 );
-	if(targetFile<0)
+		targetFilefd = open(list[n+1],O_WRONLY | O_RDONLY |O_APPEND | O_CREAT , 0644 );
+	else targetFilefd = open(list[n+1],O_WRONLY | O_RDONLY | O_CREAT , 0644 );
+	if(targetFilefd<0)
 	{
 		printf("Cannot open file %s.\n",list[n+1]);
 		return;
 	}
-	if(dup2(targetFile,1)!=1)
+	if(dup2(targetFilefd,1)!=1)
 	{
 		printf("Error in shifting the filepointer to %s.\n",list[n+1]);
 		return;
 	}
 	len-=2;
 	executeInbuild(list,len);
-	close(targetFile);
+	close(targetFilefd);
 	freopen("/dev/tty","w",stdout);
 	return;
 }
@@ -737,7 +776,7 @@ void inputFileFrom(char* list[50],int len,int n)
 	close(0); 
 	if(dup2(targetFilefd, 0) == -1) 
 		perror("dup2 fail");
-	executeInbuild(list,len);
+	executeInbuild(list,len-2);
 	close(targetFilefd);
 	freopen("/dev/tty","r",stdin);
 }
@@ -994,11 +1033,15 @@ char *getUserName()
 
 int main()
 {
+	shell_pid = getpid();
+	//printf("Shell initialized with Process id : %d\n",shell_pid);
 	char shellsWD[200];
 	getcwd(currentWD,sizeof(currentWD));
 	gethostname(deviceName,sizeof(deviceName));
 	userName = getUserName();
 	char* args;
+	signal(SIGINT,ctrlC);
+	signal(SIGTSTP,ctrlZ); 
 	while(1)
 	{
 		int a = dup(0);
@@ -1012,15 +1055,14 @@ int main()
 		//		printf("<%s@%s:~%s>",userName,deviceName,currentWD);
 		args = read_command();
 		chkAlarm();
-		if(strcmp("exit\n",args)==0)
+		if(strcmp("quit\n",args)==0)
 		{
-			printf("Exiting the Ultimate shell ever made the WonderShell\n");
 			free(args);
+			//printf("status: %d\n",kill(shell_pid,0));
 			exit(1);
 		}
 		splitcommands(args);
 		free(args);
-		signal(SIGINT,ctrlC);
 		dup2(a,0);
 		dup2(b,1);
 		close(a);
