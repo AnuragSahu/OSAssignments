@@ -1082,16 +1082,15 @@ void inputFileFrom(char* list[50],int len,int n)
 	close(0); 
 	if(dup2(targetFilefd, 0) == -1) 
 		perror("dup2 fail");
-	
+	executeInbuild(list,len);
 	close(targetFilefd);
-	//freopen("/dev/tty","r",stdin);
+	
 	printf("Here\n");
 }
 void chkFile(char* list [50],int len)
 {
 	int n=0;
 	int inrediredted = 0;
-	int outredirected = 0;
 	int redirected = 0;
 	while(n<len)
 	{
@@ -1104,7 +1103,6 @@ void chkFile(char* list [50],int len)
 		}
 		else if(strcmp(list[n],">")==0)
 		{
-			outredirected=1;
 			redirected = 1;
 			if(n==len-1)
 			{
@@ -1116,7 +1114,6 @@ void chkFile(char* list [50],int len)
 		}
 		else if(strcmp(list[n],">>")==0)
 		{
-			outredirected=1;
 			redirected = 1;
 			if(n==len-1)
 			{
@@ -1135,14 +1132,8 @@ void chkFile(char* list [50],int len)
 	}
 	if(inrediredted==1)
 	{
-		//freopen("/dev/tty","r",stdin);
+		freopen("/dev/tty","r",stdin);
 	}
-
-	if(outredirected==1)
-	{
-		//freopen("/dev/tty","w",stdout);
-	}
-	executeInbuild(list,len);
 }
 
 int chkInpt(char** list,int len)

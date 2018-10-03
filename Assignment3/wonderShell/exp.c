@@ -146,12 +146,6 @@ int delete_job(pid_t pid)
 
 int search_job(pid_t pid)
 {
-
-	if(ThisJobs ==NULL)
-	{
-		return 0;
-	}
-	//printf("Searching for %d\n",pid);
 	if (ThisJobs==NULL) {
 		return 0;
 	}
@@ -432,14 +426,14 @@ void overKillPressed()
 void ctrlC()
 {
 
-	if(getpid()!=shell_pid)
+    int pid = getpid();
+	if(pid!=shell_pid)
 		return;
 
-	if(Childpid!=0)
+	if(pid!=0 && (search_job(pid)==0))
 	{
 		fprintf(stdout,"\nSending SIGINT to %d.\n",Childpid);
-		kill(Childpid,SIGINT);
-		
+		kill(Childpid,SIGINT);		
 	}
 	signal(SIGINT, ctrlC);
 	
@@ -1061,9 +1055,9 @@ void outputFileAt(char* list[50],int len, int n, int appendOrNot)
 		return;
 	}
 	len-=2;
-	executeInbuild(list,len);
+	//executeInbuild(list,len);
 	close(targetFilefd);
-	freopen("/dev/tty","w",stdout);
+	
 	return;
 }
 
@@ -1082,16 +1076,16 @@ void inputFileFrom(char* list[50],int len,int n)
 	close(0); 
 	if(dup2(targetFilefd, 0) == -1) 
 		perror("dup2 fail");
-	
+	//executeInbuild(list,len);
 	close(targetFilefd);
-	//freopen("/dev/tty","r",stdin);
+	
 	printf("Here\n");
 }
 void chkFile(char* list [50],int len)
 {
 	int n=0;
 	int inrediredted = 0;
-	int outredirected = 0;
+	int outredireted = 0;
 	int redirected = 0;
 	while(n<len)
 	{
@@ -1104,7 +1098,7 @@ void chkFile(char* list [50],int len)
 		}
 		else if(strcmp(list[n],">")==0)
 		{
-			outredirected=1;
+			outredireted = 1;
 			redirected = 1;
 			if(n==len-1)
 			{
@@ -1116,7 +1110,7 @@ void chkFile(char* list [50],int len)
 		}
 		else if(strcmp(list[n],">>")==0)
 		{
-			outredirected=1;
+			outredireted = 1;
 			redirected = 1;
 			if(n==len-1)
 			{
@@ -1129,20 +1123,17 @@ void chkFile(char* list [50],int len)
 		
 		n++;
 	}
-	if(redirected==0)
-	{
+	
 		executeInbuild(list,len);
-	}
+	
 	if(inrediredted==1)
 	{
-		//freopen("/dev/tty","r",stdin);
+		freopen("/dev/tty","r",stdin);
 	}
-
-	if(outredirected==1)
+	if(outredireted = 1)
 	{
-		//freopen("/dev/tty","w",stdout);
+		freopen("/dev/tty","w",stdout);
 	}
-	executeInbuild(list,len);
 }
 
 int chkInpt(char** list,int len)
@@ -1159,23 +1150,8 @@ int chkInpt(char** list,int len)
 
 int executeCommand (int in, int out, struct command *cmd)
 {
-	if(chkInpt(cmd->argv,cmd->len)==1)
-	{
-		if(in != 0)
-        {
-          dup2 (in, 0);
-          close (in);
-		  
-        }
-
-      	if (out != 1)
-        {
-          dup2 (out, 1);
-          close (out);
-        }
-		chkFile(cmd->argv,cmd->len);
-		return 1;
-	}
+    int targetFilefd = open("errlog",O_WRONLY | O_RDONLY |O_APPEND | O_CREAT , 0644 );
+    dup2(targetFilefd,2);
 	pid_t pid =fork();
 	if(pid==0)
     {
@@ -1197,6 +1173,7 @@ int executeCommand (int in, int out, struct command *cmd)
       		fprintf(stderr, "Error executing the intermidiate command\n");
       		exit(EXIT_FAILURE);
       	}
+          dup2(2,targetFilefd);
       	return 1;
     }
 

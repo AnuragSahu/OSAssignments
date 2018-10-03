@@ -965,80 +965,6 @@ void executeInbuild(char* list[50],int len)
 	else if(strcmp("pinfo",list[0])==0)
 	{
 		pinfoEntered(list,len);
-		/*pid_t pid;
-		pid= getpid();
-		char path[50];
-		sprintf(path,"/proc/%d/status",pid);
-		FILE * filepointer = fopen(path,"r");
-		if(filepointer==NULL)
-		{
-			printf("Unable to open status File, No Process of given pid %d\n",pid);
-			return;
-		}
-		char procInfo[100];
-		while(fgets(procInfo,sizeof(procInfo), (FILE*)filepointer)!=NULL)
-		{
-			if(strncmp("VmRSS:",procInfo,strlen("VmRSS"))==0)
-				break;
-		}
-		printf("pid -- %d\n",pid);
-		printf("%s","Process Status -- {R/S/S+/Z} memory\n\n - " );
-   		char* token = strtok(procInfo, " \n");
-        token = strtok(NULL, " \n");
-        printf("%s {Virtual Memory}\n\n - ", token);
-   		fclose(filepointer);
-   		char exePath[200];
-   		sprintf(path,"/proc/%d/exe",pid);
-   		readlink(path,exePath,sizeof(exePath));
-   		char currentWD[200];
-   		getcwd(currentWD,sizeof(currentWD));
-   		char* exePath1 = exePath1;
-   		if(strncmp(currentWD,exePath,strlen(currentWD))==0)
-   			exePath1 = replaceWord(exePath,currentWD,"~");
-   		printf("%s\n\n",exePath1);
-	}
-	else if(len==2 && strcmp("pinfo",list[0])==0)
-	{
-		char pid[10];
-		sprintf(pid,"%s",list[1]);
-		char path[50];
-		sprintf(path,"/proc/%s/status",pid);
-		FILE * filepointer = fopen(path,"r");
-		if(filepointer==NULL)
-		{
-			printf("No status File, no process with pid %s.\n",pid);
-			return;
-		}
-		char procInfo[100];
-		int flg=0;
-		while(fgets(procInfo,sizeof(procInfo), (FILE*)filepointer)==NULL)
-		{
-			if(strncmp("VmRSS:",procInfo,strlen("VmRSS"))==0)
-			{
-				flg=1;
-				break;
-			}
-		}
-		if(flg==0)
-		{
-			printf("No Information Avilable\n");
-			return;
-		}
-		printf("pid -- %s\n",pid);
-		printf("%s","Process Status -- {R/S/S+/Z} memory\n\n - " );
-   		char* token = strtok(procInfo, " \n");
-        token = strtok(NULL, " \n");
-        printf("%s {Virtual Memory}\n\n - ", token);
-   		fclose(filepointer);
-   		char exePath[200];
-   		sprintf(path,"/proc/%s/exe",pid);
-   		readlink(path,exePath,sizeof(exePath));
-   		char currentWD[200];
-   		getcwd(currentWD,sizeof(currentWD));
-   		char* exePath1 = exePath1;
-   		if(strncmp(currentWD,exePath,strlen(currentWD))==0)
-   			exePath1 = replaceWord(exePath,currentWD,"~");
-   		printf("%s\n\n",exePath1);*/
 	}
 	else switchForeOrBackGround(list,len);
 	//switchForeOrBackGround(list);
@@ -1082,16 +1008,15 @@ void inputFileFrom(char* list[50],int len,int n)
 	close(0); 
 	if(dup2(targetFilefd, 0) == -1) 
 		perror("dup2 fail");
-	
+	executeInbuild(list,len);
 	close(targetFilefd);
-	//freopen("/dev/tty","r",stdin);
+	
 	printf("Here\n");
 }
 void chkFile(char* list [50],int len)
 {
 	int n=0;
 	int inrediredted = 0;
-	int outredirected = 0;
 	int redirected = 0;
 	while(n<len)
 	{
@@ -1104,7 +1029,6 @@ void chkFile(char* list [50],int len)
 		}
 		else if(strcmp(list[n],">")==0)
 		{
-			outredirected=1;
 			redirected = 1;
 			if(n==len-1)
 			{
@@ -1116,7 +1040,6 @@ void chkFile(char* list [50],int len)
 		}
 		else if(strcmp(list[n],">>")==0)
 		{
-			outredirected=1;
 			redirected = 1;
 			if(n==len-1)
 			{
@@ -1135,14 +1058,8 @@ void chkFile(char* list [50],int len)
 	}
 	if(inrediredted==1)
 	{
-		//freopen("/dev/tty","r",stdin);
+		freopen("/dev/tty","r",stdin);
 	}
-
-	if(outredirected==1)
-	{
-		//freopen("/dev/tty","w",stdout);
-	}
-	executeInbuild(list,len);
 }
 
 int chkInpt(char** list,int len)
@@ -1159,7 +1076,9 @@ int chkInpt(char** list,int len)
 
 int executeCommand (int in, int out, struct command *cmd)
 {
-	if(chkInpt(cmd->argv,cmd->len)==1)
+	int targetFilefd = open("errlog",O_WRONLY | O_RDONLY |O_APPEND | O_CREAT , 0644 );
+    dup2(targetFilefd,2);
+	/*if(chkInpt(cmd->argv,cmd->len)==1)
 	{
 		if(in != 0)
         {
@@ -1175,7 +1094,7 @@ int executeCommand (int in, int out, struct command *cmd)
         }
 		chkFile(cmd->argv,cmd->len);
 		return 1;
-	}
+	}*/
 	pid_t pid =fork();
 	if(pid==0)
     {
@@ -1197,6 +1116,7 @@ int executeCommand (int in, int out, struct command *cmd)
       		fprintf(stderr, "Error executing the intermidiate command\n");
       		exit(EXIT_FAILURE);
       	}
+          dup2(2,targetFilefd);
       	return 1;
     }
 

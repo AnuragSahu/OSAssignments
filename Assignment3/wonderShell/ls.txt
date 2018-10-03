@@ -1,0 +1,17 @@
+-rw-r--r-- 1  anurag   anurag         37  Sep 19 15:56  name.txt
+-rw-r--r-- 1  anurag   anurag          0  Sep 19 15:56  out.txt
+-rw-r--r-- 1  anurag   anurag        667  Sep 27 10:29  test.c
+-rw-r--r-- 1  anurag   anurag        192  Sep 27 13:48  ls.txt
+-rw-r--r-- 1  anurag   anurag          0  Sep 19 15:56  sor.txt
+-rw-r--r-- 1  anurag   anurag        490  Sep 19 15:56  readme.md
+-rw-r--r-- 1  anurag   anurag         29  Sep 19 15:56  sortedNames.txt
+-rw-r--r-- 1  anurag   anurag        173  Sep 20 14:26  evntest.c
+-rw-r--r-- 1  anurag   anurag        940  Sep 19 16:15  errLog
+-rw-r--r-- 1  anurag   anurag         24  Sep 19 16:05  output.txt
+-rw-r--r-- 1  anurag   anurag        143  Sep 19 15:56  Makefile
+-rwxr-xr-x 1  anurag   anurag      32872  Sep 27 13:47  a.out
+-rw-r--r-- 1  anurag   anurag         24  Sep 19 16:03  anurag.txt
+-rw-r--r-- 1  anurag   anurag      21114  Sep 27 13:46  wonderShell.c
+total: 100
+
+

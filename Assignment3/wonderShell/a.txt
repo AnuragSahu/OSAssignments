@@ -1,26 +1,20 @@
-abhishek
-anurag
-anurag 
-gandhi
-harsh
-  0  Sep 27 14:20  sortedName.txt
--rw-r--r-- 1  anurag   anurag      26535  Sep 27 23:33  exp.c
+-rw-r--r-- 1  anurag   anurag          0  Sep 27 14:20  sortedName.txt
+-rw-r--r-- 1  anurag   anurag      26741  Sep 27 23:11  exp.c
 -rw-r--r-- 1  anurag   anurag         37  Sep 19 15:56  name.txt
--rw-r--r-- 1  anurag   anurag        198  Sep 27 23:41  out.txt
+-rw-r--r-- 1  anurag   anurag       1064  Sep 27 22:25  out.txt
 -rw-r--r-- 1  anurag   anurag      24605  Sep 27 23:24  wonder.c
 -rw-r--r-- 1  anurag   anurag        667  Sep 27 10:29  test.c
 -rw-r--r-- 1  anurag   anurag        930  Sep 27 13:48  ls.txt
--rw-r--r-- 1  anurag   anurag       1248  Sep 27 23:27  a.txt
+-rw-r--r-- 1  anurag   anurag        453  Sep 27 23:27  a.txt
 -rw-r--r-- 1  anurag   anurag          0  Sep 19 15:56  sor.txt
 -rw-r--r-- 1  anurag   anurag        490  Sep 19 15:56  readme.md
 -rw-r--r-- 1  anurag   anurag         29  Sep 19 15:56  sortedNames.txt
--rw-r--r-- 1  anurag   anurag          0  Sep 27 23:28  outtxt
 -rw-r--r-- 1  anurag   anurag      26636  Sep 27 22:39  exp1.c
 -rw-r--r-- 1  anurag   anurag        196  Sep 27 16:51  sample.c
 -rw-r--r-- 1  anurag   anurag        940  Sep 19 16:15  errLog
--rw-r--r-- 1  anurag   anurag        515  Sep 27 23:36  errlog
+-rw-r--r-- 1  anurag   anurag        291  Sep 27 23:23  errlog
 -rw-r--r-- 1  anurag   anurag        143  Sep 19 15:56  Makefile
--rwxr-xr-x 1  anurag   anurag      33400  Sep 27 23:41  a.out
+-rwxr-xr-x 1  anurag   anurag      33400  Sep 27 23:27  a.out
 -rw-r--r-- 1  anurag   anurag         24  Sep 19 16:03  anurag.txt
 -rw-r--r-- 1  anurag   anurag      26801  Sep 27 22:22  wonderShell.c
 total: 196
