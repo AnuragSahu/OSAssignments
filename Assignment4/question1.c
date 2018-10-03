@@ -2,6 +2,12 @@
 #include<stdlib.h>
 #include<pthread.h>
 
+
+pthread_t thread_id[2];
+int counter;
+pthread_mutex_t lock;
+
+
 void enterAcademy(char character[20])
 {
     printf("%s : Entered Academy.\n",character);
@@ -60,16 +66,35 @@ int main()
     int n;
     printf("Enter n : ");
     scanf("%d",&n);
-    pthread_t  person_thread_id;
-    int number_of_players = 2*n;
-    int number_of_refrees = n;
-    //printf("Number of players entering Academy : %d\n",number_of_players);
-    //printf("Number of refrees entering Academy : %d\n",number_of_refrees);
+    if(pthread_mutex_init(&lock, NULL)!=0)
+    {
+        printf("\n Mutex unable to initialzed\n");
+        return 1;
+    }
+    int no_player = 2*n;
+    int no_refree = n;
+    int players = 0;
+    int refrees = 0;
+    double probability_of_player;
     for(int i=0;i<3*n;i++)
     {
-        sleep(rand()%3);
-        
-        //printf("HEllo\n");
+        probability_of_player = ((double)no_player / ((double)no_player + (double)no_refree))*10;
+        int prob = rand()%10;
+        int a =(int)probability_of_player % 10;
+        if(prob > a && no_refree > 0)
+        {
+            printf("Generating refree\n");
+            no_refree--;
+            refrees++;
+        }
+        else if(prob <= a && no_player > 0)
+        {
+            printf("Generating Player\n");
+            no_player--;
+            players++;
+        }
     }
+
+    printf("Players generated : %d. Refree Generated: %d\n",players,refrees);
     return 0;
 }
