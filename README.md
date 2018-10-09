@@ -27,3 +27,9 @@ corresponding change must be reflected in the shell as well.<br>
 7. If the background process exits then the shell displays the appropriate message to the user.<br>
 8. reminder command ‘remindme’ which reminds you with a custom message after the given number of seconds elapse.
 9. A ‘clock’ command which displays dynamic date and time in your shell.
+
+#Assignment3<br>
+This is not an shell Exercise, Rather it's an Assignment on Shell Synchronisation.Here are three Questions. <br>
+ - The Badmintion Court Problem,
+ - The EVM problem.
+ - Merge Sort using Threads.
