@@ -31,6 +31,6 @@ corresponding change must be reflected in the shell as well.<br>
 #Assignment3<br>
 This is not an shell Exercise, Rather it's an Assignment on Shell Synchronisation.Here are three Questions. <br>
  - The Badmintion Court Problem,
- There are some rules that the threads needs to follow in order to have th eporper understandin of threads.
+ <br>There are some rules that the threads needs to follow in order to have th eporper understanding of threads. Here each person is a thread and then there are rules governing the execution of the porgram.
  - The EVM problem.
  - Merge Sort using Threads.
