@@ -1,6 +1,6 @@
 # OSAssignments
 
-#Assignment1<br>
+##Assignment 1
 The codes of all the Assignments I wrote for Operating Systems Course During 3rd Semester of my undergrad at IIIT Hyderabad.
 Tasks in Assignment 1 :-. <br>
 1. Create a C program to read a file and create another file which has the reverse order of input file and inverted cases inside a folder named Assignment access able only by user not group or others. <br>
@@ -9,7 +9,7 @@ Tasks in Assignment 1 :-. <br>
 4. Check the permissions of the reversed file and Assignment Directory.
 
 
-#Assignment2<br>
+##Assignment 2
 This is a Shell made in C in Operating Systems Assignment2,<br>
 I have named this shell WonderShell (*coughs* Not related to wonder women) pls dont fork it Untill I do my assignemnt complete or I will be penalized<br>
 
@@ -28,7 +28,7 @@ corresponding change must be reflected in the shell as well.<br>
 8. reminder command ‘remindme’ which reminds you with a custom message after the given number of seconds elapse.
 9. A ‘clock’ command which displays dynamic date and time in your shell.
 
-#Assignment3<br>
+##Assignment 3
 This is not an shell Exercise, Rather it's an Assignment on Shell Synchronisation.Here are three Questions. <br>
  - The Badmintion Court Problem,
  <br>There are some rules that the threads needs to follow in order to have th eporper understanding of threads. Here each person is a thread and then there are rules governing the execution of the porgram.
